@@ -1,1 +1,1 @@
-# Mixed's Helix Plugins
+# Mixed's Helix Plugins Collection
