@@ -42,7 +42,7 @@ ix.config.Add("cinematicTextMusic","music/stingers/industrial_suspense2.wav","Th
 
 
 ix.command.Add("CinematicMenu", {
-	description = "Ouvre un menu pour afficher un texte et des bandes noires sur l'écran des joueurs.",
+	description = "Open a menu to setup the cinematic.",
 	adminOnly = true,
 	OnRun = function(self, client)
 		net.Start("openCinematicSplashMenu")
