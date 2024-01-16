@@ -5,8 +5,8 @@ function PLUGIN:SaveData()
 	
 	for k, v in pairs(ents.FindByClass("ix_slot_machine")) do
 		slots[#slots + 1] = {
-			v:GetAngles(),
-			v:GetPos(),
+			angles = v:GetAngles(),
+			pos = v:GetPos(),
 		}
 	end
 	
@@ -19,9 +19,10 @@ function PLUGIN:LoadData()
 	if slots then
 		for k, v in pairs(slots) do
 			local entity = ents.Create("ix_slot_machine")
-			entity:SetAngles(v[1])
-			entity:SetPos(v[2])
+			entity:SetAngles(v.angles)
+			entity:SetPos(v.pos)
 			entity:Spawn()
+			entity:Activate()
 		end
 	end
 end
