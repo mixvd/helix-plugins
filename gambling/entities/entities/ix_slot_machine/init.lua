@@ -48,37 +48,37 @@ function ENT:Initialize()
         phys:SetMass( 100 )
 	end
 
-	self.spin_1 = ents.Create("prop_scalable");
+	self.spin_1 = ents.Create("prop_scalable")
 	self.spin_1:SetPos(self:GetPos() + Vector(-17.5, -1, -7))
-	self.spin_1:SetAngles(self:GetAngles() - Angle(0, 0, 0));
-	self.spin_1:SetModel("models/props/slotmachine/spin_wheel.mdl");
-	self.spin_1:SetParent(self);
+	self.spin_1:SetAngles(self:GetAngles() - Angle(0, 0, 0))
+	self.spin_1:SetModel("models/props/slotmachine/spin_wheel.mdl")
+	self.spin_1:SetParent(self)
 	self.spin_1:SetCollisionGroup( COLLISION_GROUP_WORLD )
 	self.spin_1:SetNotSolid(true)
-	self.spin_1:Spawn();
-	self.spin_1:SetSkin(12); -- dollar sign
+	self.spin_1:Spawn()
+	self.spin_1:SetSkin(12) -- dollar sign
 	self.spin_1:SetModelScale(size,0)
 
-	self.spin_2 = ents.Create("prop_scalable");
+	self.spin_2 = ents.Create("prop_scalable")
 	self.spin_2:SetPos(self:GetPos() + Vector(-3.5, -1, -7))
-	self.spin_2:SetAngles(self:GetAngles() - Angle(0, 0, 0));
-	self.spin_2:SetModel("models/props/slotmachine/spin_wheel.mdl");
-	self.spin_2:SetParent(self);
+	self.spin_2:SetAngles(self:GetAngles() - Angle(0, 0, 0))
+	self.spin_2:SetModel("models/props/slotmachine/spin_wheel.mdl")
+	self.spin_2:SetParent(self)
 	self.spin_2:SetCollisionGroup( COLLISION_GROUP_WORLD )
 	self.spin_2:SetNotSolid(true)
-	self.spin_2:Spawn();
-	self.spin_2:SetSkin(11); -- watermelon
+	self.spin_2:Spawn()
+	self.spin_2:SetSkin(11) -- watermelon
 	self.spin_2:SetModelScale(size,0)
 
-	self.spin_3 = ents.Create("prop_scalable");
+	self.spin_3 = ents.Create("prop_scalable")
 	self.spin_3:SetPos(self:GetPos() + Vector(9.5, -1, -7))
-	self.spin_3:SetAngles(self:GetAngles() - Angle(0, 0, 0));
-	self.spin_3:SetModel("models/props/slotmachine/spin_wheel.mdl");
-	self.spin_3:SetParent(self);
+	self.spin_3:SetAngles(self:GetAngles() - Angle(0, 0, 0))
+	self.spin_3:SetModel("models/props/slotmachine/spin_wheel.mdl")
+	self.spin_3:SetParent(self)
 	self.spin_3:SetCollisionGroup( COLLISION_GROUP_WORLD )
 	self.spin_3:SetNotSolid(true)
-	self.spin_3:Spawn();
-	self.spin_3:SetSkin(10); -- horse shoe
+	self.spin_3:Spawn()
+	self.spin_3:SetSkin(10) -- horse shoe
 	self.spin_3:SetModelScale(size,0)
 
 	self.Entity.Is_playing = true

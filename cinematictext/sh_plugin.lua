@@ -2,7 +2,17 @@ local PLUGIN = PLUGIN
 
 PLUGIN.name = "Cinematic Splash Text"
 PLUGIN.description = "Cinematic looking splash text for that extra flair."
-PLUGIN.author = "76561198070441753 (TovarischPootis), ported to IX by mixed.dev"
+PLUGIN.author = "76561198070441753 (TovarischPootis), ported by mxd (IX)"
+PLUGIN.schema = "Any"
+PLUGIN.license = [[
+Copyright (c) 2024 mxd (mixvd)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+]]
 
 ix.util.Include("sv_plugin.lua")
 
