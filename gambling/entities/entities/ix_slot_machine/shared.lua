@@ -1,0 +1,9 @@
+ENT.Type = "anim"
+ENT.PrintName = "Slot Machine"
+ENT.Author = "[myb] flapjack"
+ENT.Category = "Helix"
+ENT.Spawnable = true
+ENT.AdminSpawnable = true
+ENT.AdminOnly = true
+ENT.PhysgunDisable = true
+ENT.PhysgunAllowAdmin = true
