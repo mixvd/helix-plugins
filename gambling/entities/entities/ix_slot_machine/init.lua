@@ -9,7 +9,8 @@ include( 'shared.lua' )
 function ENT:SpawnFunction(client, trace)
 	local SpawnPos = trace.HitPos + trace.HitNormal * 46
 	local entity = ents.Create( "ix_slot_machine" )
-		entity:SetPos( SpawnPos )
+	
+	entity:SetPos( SpawnPos )
 
 	local angles = (entity:GetPos() - client:GetPos()):Angle()
 	angles.p = 0
