@@ -1,5 +1,7 @@
 # Helix Plugins
 
+A repository of all my released plugin for the Helix framework.
+
 ---
 
 ## Gambling Machine
