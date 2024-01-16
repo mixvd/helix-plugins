@@ -41,7 +41,7 @@ ix.config.Add("tripleBarClover", 200, "How many tokens you get having a Triple B
     data = {min = 1, max = 200},
 })
 
-ix.config.Add("lucky7Diamond", 500, "How many tokens you get having a Lucky 7 or a Diamond?", nil, {
+ix.config.Add("luckySevenDiamond", 500, "How many tokens you get having a Lucky 7 or a Diamond?", nil, {
     category = "Slot Machine",
     data = {min = 1, max = 500},
 })
