@@ -5,7 +5,7 @@
 Add slot machine to Helix with full customization of the machine directly in-game.
 
 > [!NOTE]
-> You need these content pack in order to make the Gambling plugin work:
+> You need this content pack in order to make the Gambling plugin work:
 > [IX - Slot Machine Content](https://steamcommunity.com/sharedfiles/filedetails/?id=3140925328)
 
 ----
