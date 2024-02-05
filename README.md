@@ -38,6 +38,12 @@ Add items to set the name and the password of a containers on the map to get a p
 
 ---
 
+## Sound & Broken Glass Removal
+
+Add sound effect to broken glass and a command to remove it from 'City 8 Definitive Edition by Aspect'.
+
+---
+
 > [!TIP]
 > Feel free to add me on Discord for any support:
 > @mixvd
