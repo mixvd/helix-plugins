@@ -24,7 +24,7 @@ local brokenGlassModels = {
 }
 
 ix.command.Add("RemoveBrokenGlass", {
-    description = "Supprime le verre brisé autour de vous.",
+    description = "Remove the broken glass around you.",
     adminOnly = true,
     OnRun = function(self, client)
         local foundGlass = false
