@@ -9,7 +9,7 @@ A repository of all my released plugin for the Helix framework.
 A real-time chat translation using MyMemory API. Auto-detects language and translates.
 
 > [!NOTE]
-> You need this module in order to make the Translation system plugin to work:
+> You need this module in order to make the Translation system plugin work:
 > [CHTTP Module](https://github.com/timschumi/gmod-chttp)
 
 ---
