@@ -4,22 +4,14 @@ ix.translation = ix.translation or {}
 ix.translation.cache = ix.translation.cache or {}
 ix.translation.cacheOrder = ix.translation.cacheOrder or {}
 
-local chttp_loaded = false
-
-local function LoadCHTTP()
-    if chttp_loaded then return true end
-    
-    local success = pcall(require, "chttp")
-    if success and CHTTP != nil then
-        chttp_loaded = true
-        return true
+local function IsCHTTPAvailable()
+    if util.IsBinaryModuleInstalled("chttp") then
+        if !CHTTP then
+            require("chttp")
+        end
+        return CHTTP != nil
     end
     return false
-end
-
-local function GetHTTPFunction()
-    LoadCHTTP()
-    return chttp_loaded and CHTTP or HTTP
 end
 
 local function URLEncode(str)
@@ -35,6 +27,118 @@ end
 
 local function GetCacheKey(text, targetLang)
     return string.format("auto:%s:%s", targetLang, text)
+end
+
+local function ProcessVocoder(text, targetLang, callback)
+    local vocoderPattern = "<::%s*(.-)%s*::>"
+    local innerText = string.match(text, vocoderPattern)
+    
+    if !innerText then
+        callback(text)
+        return
+    end
+    
+    local cached, cachedDetectedLang = ix.translation.GetFromCache(innerText, targetLang)
+    if cached then
+        local result = string.gsub(text, vocoderPattern, "<:: " .. cached .. " ::>")
+        callback(result)
+        return
+    end
+    
+    local timeout = ix.config.Get("translationTimeout", 15)
+    local email = ix.config.Get("translationEmail", "")
+    
+    local url = "https://api.mymemory.translated.net/get?q=" .. URLEncode(innerText) .. "&langpair=autodetect|" .. targetLang
+    
+    if email != "" then
+        url = url .. "&de=" .. URLEncode(email)
+    end
+    
+    if !IsCHTTPAvailable() and !HTTP then
+        callback(text)
+        return
+    end
+    
+    local requestData = {
+        url = url,
+        method = "GET",
+        timeout = timeout,
+        success = function(code, body, headers)
+            if code == 200 then
+                local response = util.JSONToTable(body)
+                
+                if response and response.responseData then
+                    local translatedInner = response.responseData.translatedText
+                    local detectedLang = response.responseData.detectedLanguage or "en"
+                    
+                    local upperTranslation = translatedInner and string.upper(translatedInner) or ""
+                    local isAPIError = string.find(upperTranslation, "PLEASE SELECT") or
+                                       string.find(upperTranslation, "MYMEMORY") or
+                                       string.find(upperTranslation, "INVALID")
+                    
+                    if isAPIError or translatedInner == innerText or translatedInner == "" then
+                        if detectedLang != targetLang then
+                            local retryUrl = "https://api.mymemory.translated.net/get?q=" .. URLEncode(innerText) .. "&langpair=" .. detectedLang .. "|" .. targetLang
+                            if email != "" then
+                                retryUrl = retryUrl .. "&de=" .. URLEncode(email)
+                            end
+                            
+                            local retryRequest = {
+                                url = retryUrl,
+                                method = "GET",
+                                timeout = timeout,
+                                success = function(code2, body2, headers2)
+                                    if code2 == 200 then
+                                        local response2 = util.JSONToTable(body2)
+                                        if response2 and response2.responseData then
+                                            translatedInner = response2.responseData.translatedText
+                                        end
+                                    end
+                                    local result = string.gsub(text, vocoderPattern, "<:: " .. (translatedInner or innerText) .. " ::>")
+                                    if translatedInner and translatedInner != innerText then
+                                        ix.translation.AddToCache(innerText, targetLang, translatedInner, detectedLang)
+                                    end
+                                    callback(result)
+                                end,
+                                failed = function()
+                                    callback(text)
+                                end
+                            }
+                            
+                            if CHTTP then
+                                if !CHTTP(retryRequest) then
+                                    callback(text)
+                                end
+                            else
+                                HTTP(retryRequest)
+                            end
+                            return
+                        end
+                    end
+                    
+                    local result = string.gsub(text, vocoderPattern, "<:: " .. (translatedInner or innerText) .. " ::>")
+                    if translatedInner and translatedInner != innerText and !isAPIError then
+                        ix.translation.AddToCache(innerText, targetLang, translatedInner, detectedLang)
+                    end
+                    callback(result)
+                    return
+                end
+            end
+            
+            callback(text)
+        end,
+        failed = function(reason)
+            callback(text)
+        end
+    }
+    
+    if CHTTP then
+        if !CHTTP(requestData) then
+            callback(text)
+        end
+    else
+        HTTP(requestData)
+    end
 end
 
 function ix.translation.AddToCache(text, targetLang, translatedText, detectedLang)
@@ -91,7 +195,10 @@ function ix.translation.TranslateWithSource(text, sourceLang, targetLang, callba
         url = url .. "&de=" .. URLEncode(email)
     end
     
-    local httpFunc = GetHTTPFunction()
+    if !IsCHTTPAvailable() and !HTTP then
+        callback(text, sourceLang, true)
+        return
+    end
     
     local requestData = {
         url = url,
@@ -129,10 +236,25 @@ function ix.translation.TranslateWithSource(text, sourceLang, targetLang, callba
         end
     }
     
-    httpFunc(requestData)
+    if CHTTP then
+        if !CHTTP(requestData) then
+            callback(text, sourceLang, true)
+        end
+    else
+        HTTP(requestData)
+    end
 end
 
 function ix.translation.Translate(text, targetLang, callback)
+    local hasVocoder = string.find(text, "<::") and string.find(text, "::>")
+    
+    if hasVocoder then
+        ProcessVocoder(text, targetLang, function(translatedText)
+            callback(translatedText, "en", false)
+        end)
+        return
+    end
+    
     local cached, cachedDetectedLang = ix.translation.GetFromCache(text, targetLang)
     if cached then
         callback(cached, cachedDetectedLang, false)
@@ -148,7 +270,10 @@ function ix.translation.Translate(text, targetLang, callback)
         url = url .. "&de=" .. URLEncode(email)
     end
     
-    local httpFunc = GetHTTPFunction()
+    if !IsCHTTPAvailable() and !HTTP then
+        callback(text, "en", true)
+        return
+    end
     
     local requestData = {
         url = url,
@@ -180,7 +305,12 @@ function ix.translation.Translate(text, targetLang, callback)
                         detectedLang = correctedLang
                     end
                     
-                    if isAPIError or translatedText == text or translatedText == "" then
+                    if !isAPIError and (translatedText == text or translatedText == "") and detectedLang != targetLang then
+                        ix.translation.TranslateWithSource(text, detectedLang, targetLang, callback)
+                        return
+                    end
+                    
+                    if isAPIError then
                         if detectedLang != targetLang then
                             ix.translation.TranslateWithSource(text, detectedLang, targetLang, callback)
                             return
@@ -195,11 +325,15 @@ function ix.translation.Translate(text, targetLang, callback)
                         return
                     end
                     
-                    if translatedText and translatedText != "" then
+                    if translatedText and translatedText != "" and translatedText != text then
                         ix.translation.AddToCache(text, targetLang, translatedText, detectedLang)
                         callback(translatedText, detectedLang, false)
                     else
-                        callback(text, detectedLang, false)
+                        if detectedLang != targetLang then
+                            ix.translation.TranslateWithSource(text, detectedLang, targetLang, callback)
+                        else
+                            callback(text, detectedLang, false)
+                        end
                     end
                     return
                     
@@ -221,7 +355,13 @@ function ix.translation.Translate(text, targetLang, callback)
         end
     }
     
-    httpFunc(requestData)
+    if CHTTP then
+        if !CHTTP(requestData) then
+            callback(text, "en", true)
+        end
+    else
+        HTTP(requestData)
+    end
 end
 
 ix.log.AddType("translationLanguageChanged", function(client, characterName, newLang)

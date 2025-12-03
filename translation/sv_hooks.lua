@@ -78,8 +78,71 @@ hook.Add("InitializedPlugins", "ixTranslationOverride", function()
             end
         end
         
+        local detectedSourceLang = nil
+        local pendingDetections = 0
+        local completedDetections = 0
+        
+        for targetLang, _ in pairs(languageGroups) do
+            pendingDetections = pendingDetections + 1
+        end
+        
+        if pendingDetections == 1 then
+            local onlyLang = next(languageGroups)
+            local speakerChar = speaker:GetCharacter()
+            local speakerLang = speakerChar and speakerChar:GetLanguage() or "en"
+            
+            if speakerLang == onlyLang then
+                local validPlayers = {}
+                for _, ply in ipairs(languageGroups[onlyLang]) do
+                    if IsValid(ply) then
+                        table.insert(validPlayers, ply)
+                    end
+                end
+                
+                if #validPlayers > 0 then
+                    net.Start("ixChatMessage")
+                        net.WriteEntity(speaker)
+                        net.WriteString(chatType)
+                        net.WriteString(text)
+                        net.WriteBool(bAnonymous or false)
+                        net.WriteTable(data)
+                    net.Send(validPlayers)
+                end
+                return text
+            end
+        end
+        
         for targetLang, players in pairs(languageGroups) do
             ix.translation.Translate(text, targetLang, function(translatedText, sourceLang, failed)
+                if !detectedSourceLang and sourceLang then
+                    detectedSourceLang = sourceLang
+                    
+                    for checkLang, checkPlayers in pairs(languageGroups) do
+                        if checkLang == sourceLang then
+                            local validPlayers = {}
+                            for _, ply in ipairs(checkPlayers) do
+                                if IsValid(ply) then
+                                    table.insert(validPlayers, ply)
+                                end
+                            end
+                            
+                            if #validPlayers > 0 then
+                                net.Start("ixChatMessage")
+                                    net.WriteEntity(speaker)
+                                    net.WriteString(chatType)
+                                    net.WriteString(text)
+                                    net.WriteBool(bAnonymous or false)
+                                    net.WriteTable(data)
+                                net.Send(validPlayers)
+                            end
+                        end
+                    end
+                end
+                
+                if sourceLang == targetLang then
+                    return
+                end
+                
                 local validPlayers = {}
                 for _, ply in ipairs(players) do
                     if IsValid(ply) then
@@ -88,17 +151,6 @@ hook.Add("InitializedPlugins", "ixTranslationOverride", function()
                 end
                 
                 if #validPlayers == 0 then return end
-                
-                if sourceLang == targetLang then
-                    net.Start("ixChatMessage")
-                        net.WriteEntity(speaker)
-                        net.WriteString(chatType)
-                        net.WriteString(text)
-                        net.WriteBool(bAnonymous or false)
-                        net.WriteTable(data)
-                    net.Send(validPlayers)
-                    return
-                end
                 
                 local upperText = translatedText and string.upper(translatedText) or ""
                 local isAPIError = string.find(upperText, "PLEASE SELECT") or
