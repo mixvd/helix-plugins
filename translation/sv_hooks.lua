@@ -1,5 +1,39 @@
 local PLUGIN = PLUGIN
 
+local function SendChatToPlayers(speaker, chatType, text, bAnonymous, data, players)
+    if #players == 0 then return end
+    
+    net.Start("ixChatMessage")
+        net.WriteEntity(speaker)
+        net.WriteString(chatType)
+        net.WriteString(text)
+        net.WriteBool(bAnonymous or false)
+        net.WriteTable(data)
+    net.Send(players)
+end
+
+local function FilterAPIError(translatedText)
+    if !translatedText then return true end
+    
+    local upperText = string.upper(translatedText)
+    return string.find(upperText, "PLEASE SELECT") or
+           string.find(upperText, "TWO DISTINCT") or
+           string.find(upperText, "MYMEMORY") or
+           string.find(upperText, "INVALID LANGUAGE") or
+           string.find(upperText, "QUERY LENGTH") or
+           string.find(upperText, "RATE LIMIT")
+end
+
+local function GetValidPlayers(players)
+    local valid = {}
+    for _, ply in ipairs(players) do
+        if IsValid(ply) then
+            valid[#valid + 1] = ply
+        end
+    end
+    return valid
+end
+
 hook.Add("InitializedPlugins", "ixTranslationOverride", function()
     local originalChatSend = ix.chat.Send
     
@@ -74,121 +108,103 @@ hook.Add("InitializedPlugins", "ixTranslationOverride", function()
                 if !languageGroups[recipientLang] then
                     languageGroups[recipientLang] = {}
                 end
-                table.insert(languageGroups[recipientLang], recipient)
+                languageGroups[recipientLang][#languageGroups[recipientLang] + 1] = recipient
             end
         end
         
-        local detectedSourceLang = nil
-        local pendingDetections = 0
-        local completedDetections = 0
-        
-        for targetLang, _ in pairs(languageGroups) do
-            pendingDetections = pendingDetections + 1
+        local targetLangs = {}
+        for lang, _ in pairs(languageGroups) do
+            targetLangs[#targetLangs + 1] = lang
         end
         
-        if pendingDetections == 1 then
-            local onlyLang = next(languageGroups)
-            local speakerChar = speaker:GetCharacter()
-            local speakerLang = speakerChar and speakerChar:GetLanguage() or "en"
+        if #targetLangs == 1 then
+            local targetLang = targetLangs[1]
+            local players = GetValidPlayers(languageGroups[targetLang])
             
-            if speakerLang == onlyLang then
-                local validPlayers = {}
-                for _, ply in ipairs(languageGroups[onlyLang]) do
-                    if IsValid(ply) then
-                        table.insert(validPlayers, ply)
-                    end
-                end
-                
-                if #validPlayers > 0 then
-                    net.Start("ixChatMessage")
-                        net.WriteEntity(speaker)
-                        net.WriteString(chatType)
-                        net.WriteString(text)
-                        net.WriteBool(bAnonymous or false)
-                        net.WriteTable(data)
-                    net.Send(validPlayers)
-                end
-                return text
-            end
-        end
-        
-        for targetLang, players in pairs(languageGroups) do
+            if #players == 0 then return text end
+            
             ix.translation.Translate(text, targetLang, function(translatedText, sourceLang, failed)
-                if !detectedSourceLang and sourceLang then
-                    detectedSourceLang = sourceLang
-                    
-                    for checkLang, checkPlayers in pairs(languageGroups) do
-                        if checkLang == sourceLang then
-                            local validPlayers = {}
-                            for _, ply in ipairs(checkPlayers) do
-                                if IsValid(ply) then
-                                    table.insert(validPlayers, ply)
-                                end
-                            end
-                            
-                            if #validPlayers > 0 then
-                                net.Start("ixChatMessage")
-                                    net.WriteEntity(speaker)
-                                    net.WriteString(chatType)
-                                    net.WriteString(text)
-                                    net.WriteBool(bAnonymous or false)
-                                    net.WriteTable(data)
-                                net.Send(validPlayers)
-                            end
-                        end
-                    end
-                end
+                local finalText = translatedText
                 
-                if sourceLang == targetLang then
-                    return
-                end
-                
-                local validPlayers = {}
-                for _, ply in ipairs(players) do
-                    if IsValid(ply) then
-                        table.insert(validPlayers, ply)
-                    end
-                end
-                
-                if #validPlayers == 0 then return end
-                
-                local upperText = translatedText and string.upper(translatedText) or ""
-                local isAPIError = string.find(upperText, "PLEASE SELECT") or
-                                   string.find(upperText, "TWO DISTINCT") or
-                                   string.find(upperText, "MYMEMORY") or
-                                   string.find(upperText, "INVALID LANGUAGE") or
-                                   string.find(upperText, "QUERY LENGTH") or
-                                   string.find(upperText, "RATE LIMIT")
-                
-                if isAPIError then
-                    translatedText = text
+                if FilterAPIError(translatedText) or failed then
+                    finalText = text
                     failed = true
                 end
                 
-                if failed or translatedText == text then
-                    translatedText = text
-                end
-                
-                local finalText = translatedText
-                if ix.config.Get("translationShowOriginal") and translatedText != text and !failed then
-                    finalText = translatedText .. " [" .. text .. "]"
+                if ix.config.Get("translationShowOriginal") and finalText != text and !failed then
+                    finalText = finalText .. " [" .. text .. "]"
                 end
                 
                 local translatedData = table.Copy(data)
                 translatedData.originalText = text
-                translatedData.translated = !failed
+                translatedData.translated = !failed and finalText != text
                 translatedData.sourceLang = sourceLang
                 translatedData.targetLang = targetLang
                 
-                net.Start("ixChatMessage")
-                    net.WriteEntity(speaker)
-                    net.WriteString(chatType)
-                    net.WriteString(finalText)
-                    net.WriteBool(bAnonymous or false)
-                    net.WriteTable(translatedData)
-                net.Send(validPlayers)
+                SendChatToPlayers(speaker, chatType, finalText, bAnonymous, translatedData, players)
             end)
+            
+            return text
         end
+        
+        local firstLang = targetLangs[1]
+        
+        ix.translation.Translate(text, firstLang, function(firstTranslated, sourceLang, firstFailed)
+            local detectedSource = sourceLang or "en"
+            
+            for _, targetLang in ipairs(targetLangs) do
+                local players = GetValidPlayers(languageGroups[targetLang])
+                if #players == 0 then continue end
+                
+                if targetLang == detectedSource then
+                    SendChatToPlayers(speaker, chatType, text, bAnonymous, data, players)
+                    continue
+                end
+                
+                if targetLang == firstLang then
+                    local finalText = firstTranslated
+                    
+                    if FilterAPIError(firstTranslated) or firstFailed then
+                        finalText = text
+                        firstFailed = true
+                    end
+                    
+                    if ix.config.Get("translationShowOriginal") and finalText != text and !firstFailed then
+                        finalText = finalText .. " [" .. text .. "]"
+                    end
+                    
+                    local translatedData = table.Copy(data)
+                    translatedData.originalText = text
+                    translatedData.translated = !firstFailed and finalText != text
+                    translatedData.sourceLang = detectedSource
+                    translatedData.targetLang = targetLang
+                    
+                    SendChatToPlayers(speaker, chatType, finalText, bAnonymous, translatedData, players)
+                    continue
+                end
+                
+                ix.translation.TranslateWithSource(text, detectedSource, targetLang, function(translatedText, srcLang, failed)
+                    local finalText = translatedText
+                    
+                    if FilterAPIError(translatedText) or failed then
+                        finalText = text
+                        failed = true
+                    end
+                    
+                    if ix.config.Get("translationShowOriginal") and finalText != text and !failed then
+                        finalText = finalText .. " [" .. text .. "]"
+                    end
+                    
+                    local translatedData = table.Copy(data)
+                    translatedData.originalText = text
+                    translatedData.translated = !failed and finalText != text
+                    translatedData.sourceLang = detectedSource
+                    translatedData.targetLang = targetLang
+                    
+                    SendChatToPlayers(speaker, chatType, finalText, bAnonymous, translatedData, players)
+                end)
+            end
+        end)
         
         return text
     end
